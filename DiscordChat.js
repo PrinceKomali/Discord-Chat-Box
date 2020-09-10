@@ -1,136 +1,82 @@
-<!doctype html>
-<html>
-<title>Discord Chat Box</title>
-<head>
+var app = require('express')();
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+var open = require('open')
+var port = 3000;
+const Discord = require('discord.js')
+const client = new Discord.Client()
+const auth = require('./discordtoken.json')
+app.get('/', function (req, res) {
+    res.sendFile(__dirname + '/DiscordChat.html');
+});
 
-    <style>
-        div {
-            
-        }
-        
-        .fadeout {
-            opacity: 1;
-            -webkit-transition: opacity 1000ms linear;
-            transition: opacity 1000ms linear;
-        }
-        body {
-            font-family: Arial;
-            background-color: #23214a;
-            color: #ffffff;
-            font-weight: bold;
-            margin: 0px;
-            height: 100%;
-            overflow: hidden
-        }
-
-        #messagecontainer {
-            position: absolute;
-            left: 50px;
-            bottom: 50px;
-        }
-
-
-        .flyin {
-            -webkit-animation: test1 .2s linear;
-            
-           
-        }
-
-        @-webkit-keyframes test1 {
-            0% {
-                -webkit-transform: translateX(75%);
-            }
-
-            100% {
-                -webkit-transform: translateX(0%);
+var selectedChannel = "751797116271198228"
+var allch = false;
+try {
+    client.on("message", async (message) => {
+        var splitMessage = message.content.split(" ")
+        if (splitMessage[0] == "&channel") {
+            if (splitMessage[1] == "all") {
+                allch = true
+                message.channel.send("Changed Selected Channel to All Channels")
+            } else {
+                allch = false
+                selectedChannel = message.channel.id.toString()
+                message.channel.send("Changed Selected Channel to " + message.channel.toString())
             }
         }
-        .fade-out {
-            animation: fade 2s;
-            -webkit-animation: fade .5s;
-            -moz-animation: fade .5s;
-        }
-
-        /* Animate opacity */
-        @keyframes fade {
-            from {
-                opacity: 1
-            }
-
-            to {
-                opacity: 0
-            }
-        }
-
-        @-moz-keyframes fade {
-            from {
-                opacity: 1
-            }
-
-            to {
-                opacity: 0
-            }
-        }
-
-        @-webkit-keyframes fade {
-            from {
-                opacity: 1
-            }
-
-            to {
-                opacity: 0
-            }
-        }
-
-
-    </style>
-</head>
-
-<body>
-    <div id="messagecontainer" width ="100px" height="50px"></div>
-    <form action="">
-        
-    </form>
-    <!-- <script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>-->
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        var duration = 10000
-            socket = io()
-            socket.on("discordmessage", (color, user, content) => {
-                recal(color, user, content)
-            })
-        socket.on("duration", res => {
-            duration = res
-        })
-        function recal(color, user, content) {
-            var element = document.createElement("p")
-            element.className = "flyin"
-            var spanelement = document.createElement("span")
-            spanelement.appendChild(document.createTextNode(user + ': '))
-            element.appendChild(spanelement)
-
-            element.innerHTML = '<span style = "color:' + color+ ';font-weight:bold">' + user + ': </span>' + content
-
-            var x = document.getElementById('messagecontainer')
-            x.appendChild(element)
-
-
-            setTimeout(function () {
-            element.classList.add('fade-out');
-                element.onanimationend = (e) => {
-                    if (e.srcElement.classList.contains('fade-out')) {
-                        element.parentNode.removeChild(element);
-                    }
-
+        if (splitMessage[0] == "&duration") {
+            if (!isNaN(splitMessage[1])) {
+                try {
+                    io.emit("duration", parseInt(splitMessage[1]))
+                    message.channel.send("Changing Message Duration to " + splitMessage[1] + " milliseconds")
+                } catch (e) {
+                    message.channel.send("Something went wrong :/")
                 }
-                }, duration)
-            ;
+            } else {
+                message.channel.send("Please Provide a Valid Number!")
+            }
+        }
+        if (message.channel.id == selectedChannel || allch) {
+            var string = message.content;
 
+            string = string.replace(/[a-z]:[^:\s]+:|:[^:\s]+:/g, "img height = '25' src= 'http://cdn.discordapp.com/emojis/")
+            string = string.split(/>/g)
+            for (i = 0; i < string.length; i++) {
+                if (string[i].includes("cdn.discordapp.com/emojis/")) {
+                    string[i] = string[i] + "'>"
+                }
+                else if (string[i].includes("<")) {
+                    string[i] += ">"
+                }
+
+
+            }
+            string = string.join("")
+            string = string.split(/[<>]/g)
+            for (i = 0; i < string.length; i++) {
+                if (string[i].startsWith("#")) {
+
+                    string[i] = "<span style='color:#7286d5'>#" + client.channels.cache.get(string[i].replace("#", "")).name + "</span>"
+                }
+                if (string[i].startsWith("@")) {
+                    string[i] = string[i].replace("!", "")
+                    string[i] = "<span style='color:#7286d5'>@" + client.users.cache.get(string[i].replace("@", "")).username + "</span>"
+                }
+                if (string[i].startsWith("img height = '25'")) {
+                    string[i] = "<" + string[i] + ">"
+                }
+            }
+
+            string = string.join("")
+            io.emit("discordmessage", message.member.displayHexColor, message.author.username, string)
 
         }
+    })
+}
+catch (err) {}
 
-    </script>
-</body>
-</html>
-
+http.listen(port, function () {
+    console.log('listening on *:' + port);
+});
+client.login(auth.token)
