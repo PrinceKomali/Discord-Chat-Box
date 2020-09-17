@@ -11,4 +11,4 @@ Random program I made for Discord Streams
 3) Go to your browser and open `http://localhost:3000`
 4) In discord, run the command `&setchannel` in the channel you want to capture (you should see the messages pop up in the window)
 5) (optional) For OBS, if you want a transparent background, make a window capture, crop out the top of the browser, and then go to filters
-6) Add a color key (not chroma), (note to self, fill in later)
+6) (optional) Add a color key (not chroma), set the `Key Color Type` to `Custom Color`, click `Select Color`, and enter **`#23214a`** where it says `HTML`
